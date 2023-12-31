@@ -1,0 +1,105 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
+using namespace std;  
+
+struct Point {
+    int x, y;
+};
+
+float distance(Point a, Point b) {
+    return hypot(a.x - b.x, a.y - b.y);
+}
+
+bool compareX(Point a, Point b) {
+    return a.x < b.x;
+}
+
+bool compareY(Point a, Point b) {
+    return a.y < b.y;
+}
+
+pair<Point, Point> BFCP(vector<Point>& points) {
+    float miniD = numeric_limits<float>::infinity();
+    pair<Point, Point> CP;
+
+    for (size_t i = 0; i < points.size(); ++i) {
+        for (size_t j = i + 1; j < points.size(); ++j) {
+            float d = distance(points[i], points[j]);
+            if (d < miniD) {
+                miniD = d;
+                CP = { points[i], points[j] };
+            }
+        }
+    }
+
+    return CP;
+}
+
+pair<Point, Point> CPStrip(vector<Point>& strip, float miniD) {
+    pair<Point, Point> CP;
+    sort(strip.begin(), strip.end(), compareY);
+
+    for (size_t i = 0; i < strip.size(); ++i) {
+        for (size_t j = i + 1; j < min(i + 7, strip.size()); ++j) {
+            float d = distance(strip[i], strip[j]);
+            if (d < miniD) {
+                miniD = d;
+                CP = { strip[i], strip[j] };
+            }
+        }
+    }
+
+    return CP;
+}
+
+pair<Point, Point> CPDC(vector<Point>& points) {
+    if (points.size() <= 3) {
+        return BFCP(points);
+    }
+
+    size_t mid = points.size() / 2;
+    vector<Point> leftHalf(points.begin(), points.begin() + mid);
+    vector<Point> rightHalf(points.begin() + mid, points.end());
+
+    auto leftCP = CPDC(leftHalf);
+    auto rightCP = CPDC(rightHalf);
+
+    float miniD = min(distance(leftCP.first, leftCP.second),
+        distance(rightCP.first, rightCP.second));
+
+    vector<Point> strip;
+    for (const Point& point : points) {
+        if (abs(point.x - points[mid].x) < miniD) {
+            strip.push_back(point);
+        }
+    }
+
+    auto stripCP = CPStrip(strip, miniD);
+
+    return min({ leftCP, rightCP, stripCP },[](const auto& a, const auto& b)
+        {return distance(a.first, a.second) < distance(b.first, b.second);
+        });
+}
+
+int main() {
+    vector<Point> points = { {2, 0}, {2, 4}, {5, 3}, {7, 8}, {9, 5} };
+    cout << "Original Points:\n";
+    for (const auto& point : points) {
+        cout << "(" << point.x << ", " << point.y << ")\n";
+    }
+
+    sort(points.begin(), points.end(), compareX);
+
+    auto result = CPDC(points);
+
+    cout << "Closest Pair: (" << result.first.x << ", " << result.first.y << ") and ("
+        << result.second.x << ", " << result.second.y << ")\n";
+
+    cout << "Minimum Distance: " << distance(result.first, result.second) << '\n';
+
+    return 0;
+}
